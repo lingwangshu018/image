@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>图片转换器</title>
+<style>
+:root{--bg:#f6f8fc;--card:#fff;--text:#1f2937;--muted:#6b7280;--line:#dbe3ef;--p:#5b7cff;--ok:#159447}*{box-sizing:border-box}body{margin:0;padding:28px;font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;color:var(--text);background:linear-gradient(135deg,#f2f6ff,#fbf8ff);min-height:100vh}.wrap{max-width:980px;margin:auto}h1{margin:0 0 6px}.sub{color:var(--muted);margin-bottom:20px}.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;margin:0 0 16px;box-shadow:0 10px 28px #1f293712}.drop{border:2px dashed #b9c7f4;border-radius:16px;padding:38px 18px;text-align:center;background:#fafcff;cursor:pointer}.drop.drag{background:#eef3ff;border-color:var(--p)}.drop b{display:block;font-size:19px;margin-bottom:8px}.drop span,label,.meta,.cdn,.tip{color:var(--muted);font-size:13px}input[type=file]{display:none}.controls{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;align-items:end}label{display:block;margin-bottom:6px}select,input[type=number]{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px;background:#fff}.quality{display:flex;align-items:center;gap:8px}.quality input{width:100%}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}button{border:0;border-radius:10px;padding:10px 14px;cursor:pointer;font-weight:700;background:#eef2ff;color:#4052ad}.primary{background:var(--p);color:#fff}button:disabled{opacity:.45}.list{display:grid;gap:10px}.item{display:grid;grid-template-columns:50px 1fr auto;gap:12px;align-items:center;border:1px solid var(--line);border-radius:13px;padding:10px}.thumb{width:50px;height:50px;object-fit:cover;border-radius:9px;background:#edf1f6}.name{font-weight:700;overflow:hidden;text-overflow:ellipsis}.meta{margin-top:4px}.cdn{margin-top:6px;word-break:break-all}.copy{font-size:12px;padding:5px 8px;margin-left:5px}.status{font-size:12px;font-weight:700}.ok{color:var(--ok)}.empty{text-align:center;color:var(--muted);padding:18px}.tip{line-height:1.7}@media(max-width:800px){.controls{grid-template-columns:1fr 1fr}}@media(max-width:480px){body{padding:14px}.controls{grid-template-columns:1fr}.item{grid-template-columns:44px 1fr}.status{grid-column:2}.thumb{width:44px;height:44px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>🖼️ 图片转换器</h1>
+<div class="sub">拖入图片 → 转换压缩 → 自动生成仓库 CDN 地址</div>
+<div class="card"><div class="drop" id="drop"><b>把图片拖到这里</b><span>或点击选择图片，可批量处理</span><input id="files" type="file" accept="image/*" multiple></div></div>
+<div class="card">
+<div class="controls">
+<div><label>输出格式</label><select id="format"><option value="image/webp">WebP（推荐）</option><option value="image/png">PNG</option><option value="image/jpeg">JPG</option></select></div>
+<div><label>最长边 px</label><input id="maxSide" type="number" value="2000" min="0" step="100"></div>
+<div><label>画质 <b id="qText">85</b></label><div class="quality"><input id="quality" type="range" min="40" max="100" value="85"></div></div>
+<div><label>文件名</label><select id="rename"><option value="safe">自动安全命名</option><option value="keep">保留原名</option></select></div>
+<div><label>上传目录</label><select id="folder"><option value="backgrounds">backgrounds · 背景</option><option value="avatars">avatars · 头像</option><option value="icons">icons · 图标</option><option value="illustrations">illustrations · 插画</option><option value="stickers">stickers · 贴纸</option></select></div>
+</div>
+<div class="actions"><button id="convert" class="primary" disabled>开始转换</button><button id="download" disabled>下载全部</button><button id="clear">清空</button></div>
+</div>
+<div class="card"><div id="list" class="list"><div class="empty">还没有图片～</div></div></div>
+<div class="card tip"><b>推荐：</b>壁纸、插画用 WebP + 85；透明图标可用 WebP 或 PNG。转换器生成的 CDN 地址只有在你把成品图上传到所选的同名目录后才会生效。</div>
+</div>
+<script>
+const CDN='https://cdn.jsdelivr.net/gh/lingwangshu018/image@main/';
+const state=[],$=id=>document.getElementById(id),drop=$('drop'),files=$('files'),list=$('list');
+$('quality').oninput=e=>$('qText').textContent=e.target.value;
+drop.onclick=()=>files.click();drop.ondragover=e=>{e.preventDefault();drop.classList.add('drag')};drop.ondragleave=()=>drop.classList.remove('drag');drop.ondrop=e=>{e.preventDefault();drop.classList.remove('drag');add([...e.dataTransfer.files])};files.onchange=e=>add([...e.target.files]);
+function add(arr){arr.filter(f=>f.type.startsWith('image/')).forEach(file=>state.push({file,preview:URL.createObjectURL(file),blob:null,outName:'',cdn:'',status:'待转换'}));render()}
+function bytes(n){return n<1024?n+' B':n<1048576?(n/1024).toFixed(1)+' KB':(n/1048576).toFixed(2)+' MB'}
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function safe(s){return s.normalize('NFKD').replace(/\.[^.]+$/,'').replace(/[^\w\u4e00-\u9fa5-]+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'').toLowerCase()||'image'}
+function ext(t){return t==='image/png'?'png':t==='image/jpeg'?'jpg':'webp'}
+function render(){if(!state.length){list.innerHTML='<div class="empty">还没有图片～</div>';$('convert').disabled=true;$('download').disabled=true;return}$('convert').disabled=false;$('download').disabled=!state.some(x=>x.blob);list.innerHTML='';state.forEach((x,i)=>{const el=document.createElement('div');el.className='item';el.innerHTML=`<img class="thumb" src="${x.preview}"><div><div class="name">${esc(x.file.name)}</div><div class="meta">${bytes(x.file.size)}${x.blob?' → '+esc(x.outName)+' · '+bytes(x.blob.size):''}</div>${x.cdn?`<div class="cdn">${esc(x.cdn)} <button class="copy" data-i="${i}">复制 CDN</button></div>`:''}</div><div class="status ${x.blob?'ok':''}">${esc(x.status)}</div>`;list.appendChild(el)});list.querySelectorAll('.copy').forEach(b=>b.onclick=()=>navigator.clipboard.writeText(state[+b.dataset.i].cdn).then(()=>{b.textContent='已复制 ✓';setTimeout(()=>b.textContent='复制 CDN',1000)}))}
+async function image(file){const u=URL.createObjectURL(file),img=new Image();img.src=u;await img.decode();URL.revokeObjectURL(u);return img}
+async function one(x){const type=$('format').value,q=+$('quality').value/100,max=Math.max(0,+$('maxSide').value||0),img=await image(x.file);let w=img.naturalWidth,h=img.naturalHeight;if(max&&Math.max(w,h)>max){const s=max/Math.max(w,h);w=Math.round(w*s);h=Math.round(h*s)}const c=document.createElement('canvas');c.width=w;c.height=h;const ctx=c.getContext('2d');if(type==='image/jpeg'){ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h)}ctx.drawImage(img,0,0,w,h);x.blob=await new Promise((r,j)=>c.toBlob(b=>b?r(b):j(Error('转换失败')),type,q));const old=x.file.name.replace(/\.[^.]+$/,''),base=$('rename').value==='safe'?safe(old):old;x.outName=base+'.'+ext(type);x.cdn=CDN+$('folder').value+'/'+encodeURIComponent(x.outName);x.status='已完成 ✓'}
+$('convert').onclick=async()=>{$('convert').disabled=true;for(const x of state){x.status='转换中…';render();try{await one(x)}catch(e){x.status='失败：'+e.message}render()}$('convert').disabled=false};
+function save(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)}
+$('download').onclick=async()=>{for(const x of state.filter(x=>x.blob)){save(x.blob,x.outName);await new Promise(r=>setTimeout(r,150))}};
+$('clear').onclick=()=>{state.forEach(x=>URL.revokeObjectURL(x.preview));state.length=0;files.value='';render()};
+</script>
+</body>
+</html>
