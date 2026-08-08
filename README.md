@@ -4,6 +4,10 @@
 
 图片上传到这里以后，可以通过 **jsDelivr CDN** 生成公开访问链接。
 
+#图使用
+国内网站：https://raw.gitcode.com/lingwangshu018/image/raw/main/
+本网站：https://cdn.jsdelivr.net/gh/lingwangshu018/image@main/
+
 ## 直接打开图片转换器
 
 GitHub Pages：
